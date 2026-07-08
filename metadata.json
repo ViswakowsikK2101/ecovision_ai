@@ -1,0 +1,10 @@
+{
+  "name": "EcoVision AI",
+  "description": "AI-powered waste segregation application with image analysis and an integrated chatbot.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
