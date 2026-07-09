@@ -86,18 +86,6 @@ const customStyles = `
 type Message = { role: 'user' | 'assistant'; content: string };
 type AnalysisResult = { detected_class: string; description: string; toxicity: string; disposal: string };
 
-const fileToDataUrl = (file: File | Blob) => new Promise<string>((resolve, reject) => {
-  const reader = new FileReader();
-  reader.onload = () => {
-    if (typeof reader.result === 'string') {
-      resolve(reader.result);
-      return;
-    }
-    reject(new Error('Unable to read the image file.'));
-  };
-  reader.onerror = () => reject(reader.error ?? new Error('Unable to read the image file.'));
-  reader.readAsDataURL(file);
-});
 
 const titles = [
   "தூய்மைAI (Thooymai AI)",
@@ -148,8 +136,14 @@ export default function App() {
 
   // API Status Ping
   useEffect(() => {
-    fetch(`${BACKEND_URL}/health`)
-      .then(() => setApiStatus('online'))
+    fetch(`${BACKEND_URL}/`)
+      .then((res) => {
+        if (res.ok) {
+          setApiStatus('online');
+        } else {
+          setApiStatus('offline');
+        }
+      })
       .catch(() => setApiStatus('offline'));
   }, []);
 
@@ -244,10 +238,16 @@ export default function App() {
     setIsAnalyzing(true);
     setAnalysisResult(null);
     try {
+      const formData = new FormData();
+      if (image instanceof File) {
+        formData.append('image', image);
+      } else {
+        formData.append('image', image, 'image.jpg');
+      }
+
       const res = await fetch(`${BACKEND_URL}/analyze`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: await fileToDataUrl(image) }),
+        body: formData,
       });
       if (!res.ok) throw new Error("Server error");
       const data = await res.json();
