@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Upload, X, Send, Bot, FlipHorizontal, Camera as CameraIcon, Cpu, Recycle, ShieldAlert, FileText, ChevronDown, CheckCircle, Leaf } from 'lucide-react';
 
-const BACKEND_URL = '/api';
+const BACKEND_URL = 'https://vk2101-eco-vision-ai.hf.space';
 
 const customStyles = `
   @keyframes dissolveSwap {
