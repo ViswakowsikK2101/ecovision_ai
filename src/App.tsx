@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Upload, X, Send, Bot, FlipHorizontal, Camera as CameraIcon, Cpu, Recycle, ShieldAlert, FileText, ChevronDown, CheckCircle, Leaf } from 'lucide-react';
 
-const BACKEND_URL = "https://vk2101-eco-vision-ai.hf.space";
+const BACKEND_URL = '/api';
 
 const customStyles = `
   @keyframes dissolveSwap {
@@ -48,6 +48,18 @@ const customStyles = `
     animation: float 5s ease-in-out 1s infinite;
   }
 
+  .typing-dot-delay-0 {
+    animation-delay: 0ms;
+  }
+
+  .typing-dot-delay-150 {
+    animation-delay: 150ms;
+  }
+
+  .typing-dot-delay-300 {
+    animation-delay: 300ms;
+  }
+
   .glass-header { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255, 255, 255, 0.5); }
   .scan-line-sleek { height: 2px; width: 100%; background: #22c55e; box-shadow: 0 0 15px #22c55e; position: absolute; }
   .chat-bubble { border-radius: 18px 18px 4px 18px; }
@@ -73,6 +85,19 @@ const customStyles = `
 
 type Message = { role: 'user' | 'assistant'; content: string };
 type AnalysisResult = { detected_class: string; description: string; toxicity: string; disposal: string };
+
+const fileToDataUrl = (file: File | Blob) => new Promise<string>((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => {
+    if (typeof reader.result === 'string') {
+      resolve(reader.result);
+      return;
+    }
+    reject(new Error('Unable to read the image file.'));
+  };
+  reader.onerror = () => reject(reader.error ?? new Error('Unable to read the image file.'));
+  reader.readAsDataURL(file);
+});
 
 const titles = [
   "தூய்மைAI (Thooymai AI)",
@@ -123,7 +148,7 @@ export default function App() {
 
   // API Status Ping
   useEffect(() => {
-    fetch(BACKEND_URL)
+    fetch(`${BACKEND_URL}/health`)
       .then(() => setApiStatus('online'))
       .catch(() => setApiStatus('offline'));
   }, []);
@@ -219,11 +244,10 @@ export default function App() {
     setIsAnalyzing(true);
     setAnalysisResult(null);
     try {
-      const formData = new FormData();
-      formData.append('image', image);
       const res = await fetch(`${BACKEND_URL}/analyze`, {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: await fileToDataUrl(image) }),
       });
       if (!res.ok) throw new Error("Server error");
       const data = await res.json();
@@ -250,7 +274,7 @@ export default function App() {
       const res = await fetch(`${BACKEND_URL}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newMessages),
+        body: JSON.stringify({ messages: newMessages }),
       });
       if (!res.ok) throw new Error("Server error");
       const data = await res.json();
@@ -575,12 +599,12 @@ export default function App() {
                 </div>
                 <div>
                   <div className="font-bold text-sm tracking-wide">EcoBot Assistant</div>
-                  <div className="text-[10px] text-emerald-100 font-medium opacity-80">Powered by Llama 3 API</div>
+                  <div className="text-[10px] text-emerald-100 font-medium opacity-80">Powered by Groq API</div>
                 </div>
               </div>
               <div className="flex items-center gap-3 relative z-10">
                 <div className="w-2 h-2 rounded-full bg-emerald-300 shadow-[0_0_8px_rgba(110,231,183,1)] animate-pulse"></div>
-                <button onClick={() => setChatOpen(false)} className="hover:bg-white/20 p-1.5 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-white/50">
+                <button onClick={() => setChatOpen(false)} title="Close chat" aria-label="Close chat" className="hover:bg-white/20 p-1.5 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-white/50">
                   <ChevronDown size={18} />
                 </button>
               </div>
@@ -614,9 +638,9 @@ export default function App() {
               {isChatTyping && (
                 <div className="flex justify-start animate-in fade-in duration-300">
                   <div className="bg-white p-4 rounded-2xl rounded-bl-none shadow-sm border border-slate-100 flex items-center gap-1.5">
-                    <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce typing-dot-delay-0" />
+                    <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce typing-dot-delay-150" />
+                    <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce typing-dot-delay-300" />
                   </div>
                 </div>
               )}
@@ -635,6 +659,8 @@ export default function App() {
                 <button 
                   type="submit" 
                   disabled={!chatInput.trim() || isChatTyping} 
+                  title="Send message"
+                  aria-label="Send message"
                   className="w-10 h-10 bg-emerald-600 hover:bg-emerald-500 rounded-full flex items-center justify-center text-white shrink-0 disabled:opacity-50 disabled:hover:bg-emerald-600 transition-all shadow-md active:scale-95"
                 >
                   <Send size={16} className="-ml-0.5" />
@@ -646,6 +672,8 @@ export default function App() {
           {!chatOpen && (
             <button 
               onClick={() => setChatOpen(true)}
+              title="Open chat"
+              aria-label="Open chat"
               className="group relative w-16 h-16 bg-gradient-to-tr from-emerald-600 to-teal-500 rounded-full shadow-[0_10px_25px_rgba(16,185,129,0.4)] flex items-center justify-center text-white cursor-pointer transform hover:scale-110 hover:-translate-y-1 transition-all duration-300 active:scale-95"
             >
               <div className="absolute inset-0 rounded-full bg-white opacity-0 group-hover:opacity-20 transition-opacity"></div>
